@@ -12,8 +12,8 @@ library("readr")
 
 # Defining Twitter access tokens
 app_name <- "AirlineCustomerSatisfaction"
-consumer_key <- "BujsomF1UhhKKWvITZOwF5Zsc"
-consumer_secret <-"fTvj08eVKFFYXwxnWBms2RvZWtN5UISFr5utcDky2Ykux89aoR"
+consumer_key <- ""
+consumer_secret <-""
 
 # Generating access token
 twitter_token <- create_token(
