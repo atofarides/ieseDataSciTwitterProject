@@ -1,0 +1,10 @@
+airline,sentiment,n,percent,acsi_rank,rank_diff
+AlaskaAir,positive,74837,0.7474058464580691,1,0
+Allegiant,positive,4421,0.6232905681657973,7,5
+SouthwestAir,positive,104927,0.6066968106020306,2,1
+Delta,positive,177260,0.5862528566845592,4,0
+JetBlue,positive,44207,0.5834213165813229,3,2
+FlyFrontier,positive,9925,0.5436568799298861,9,3
+AmericanAir,positive,175311,0.5296692871515671,5,2
+united,positive,100913,0.5294713314304903,8,0
+SpiritAirlines,positive,10839,0.43248743117069666,10,1

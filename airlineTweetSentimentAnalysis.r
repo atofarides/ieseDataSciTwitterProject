@@ -28,4 +28,13 @@ sentimentsByAirline <- count(tweetsSentiments, airline, sentiment) %>%
 ggplot(sentimentsByAirline, aes(x=reorder(airline,-percent), y=percent)) +
   geom_col() 
 
+# compare against ACSI
+acsiRank <- c(1,7,2,4,3,9,5,8,10)
+sentimentsByAirline <- mutate(sentimentsByAirline, acsi_rank = acsiRank, rank_diff = abs(row_number()-acsi_rank))
+mean(sentimentsByAirline$rank_diff)
+
+# write to csv
+write_csv(sentimentsByAirline, file.path("~", "Github","ieseDataSciTwitterProject", "sentimentsByAirline.csv", fsep = "/"))
+
+
 
