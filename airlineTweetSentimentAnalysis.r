@@ -31,7 +31,8 @@ ggplot(sentimentsByAirline, aes(x=reorder(airline,-percent), y=percent)) +
 # compare against ACSI
 acsiRank <- c(1,7,2,4,3,9,5,8,10)
 sentimentsByAirline <- mutate(sentimentsByAirline, acsi_rank = acsiRank, rank_diff = abs(row_number()-acsi_rank))
-mean(sentimentsByAirline$rank_diff)
+mean(sentimentsByAirline$rank_diff) # 1.5 rank diff
+mean(sentimentsByAirline$rank_diff[-2]) # 1.1 rank diff if Allegiant is excluded
 
 # write to csv
 write_csv(sentimentsByAirline, file.path("~", "Github","ieseDataSciTwitterProject", "sentimentsByAirline.csv", fsep = "/"))
