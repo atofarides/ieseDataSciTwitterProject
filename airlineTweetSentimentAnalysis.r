@@ -12,30 +12,62 @@ library(ggplot2)
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
 tweetsText <- read_csv(path, col_names = TRUE)
 
-# Perform unnest tokens and identify positive/negative sentiments
-tweetsWords <- unnest_tokens(tweetsText, word, text)
-tweetsSentiments <- tweetsWords %>%
+# Perform unnest tokens, adding the tweet ID on a separate column to keep track for further grouping 
+tweetsWords <- tweetsText %>%
+              mutate(.,tweetNumber = row_number()) %>%
+              unnest_tokens(., word, text)
+
+# Sentiment analysis using bing lexicon
+tweetsSentimentsBing <- tweetsWords %>%
                     inner_join(get_sentiments("bing"))
 
-# Get sentiments by airline 
-sentimentsByAirline <- count(tweetsSentiments, airline, sentiment) %>%
-                        group_by(airline) %>%
-                        mutate(percent = n/sum(n)) %>%
-                        filter(sentiment == "positive") %>%
-                        arrange(desc(percent)) %>%
-                        #arrange(desc(sentiment),desc(percent)) %>%
-                        ungroup() 
-ggplot(sentimentsByAirline, aes(x=reorder(airline,-percent), y=percent)) +
-  geom_col() 
+# Create polarity matrix
+positiveSentiments <- tweetsSentimentsBing %>%
+                      filter(sentiment == "positive") %>%
+                      count(.,airline, tweetNumber)
+
+negativeSentiments <- tweetsSentimentsBing %>%
+                      filter(sentiment == "negative") %>%
+                      count(.,airline, tweetNumber)
+
+pol <- full_join(positiveSentiments, negativeSentiments, by=c("tweetNumber","airline"), suffix = c(".positive",".negative")) 
+pol[is.na(pol)] <- 0
+pol <- mutate(pol, polarity = n.positive - n.negative)
+
+ggplot(pol, aes(x=polarity)) + geom_histogram(binwidth = 1, color="black",fill="white") + 
+  facet_wrap(facets = "airline", scales = "free")
+
+# As we can see the airlines with the most positive comments, normalised to volume, are 
+# Positive: AlaskaAir, Delta, JetBlue, SouthWest, Allegiant
+# Negative: Spirit
+
+# Create polarity thresholds to rank airlines 
+
+airlinePolarity <- pol %>%
+                    group_by(airline) %>%
+                    summarise(threshold1 = sum(polarity>=1)/sum(polarity<=-1),
+                              threshold2 = sum(polarity>=2)/sum(polarity<=-2),
+                              threshold3 = sum(polarity>=3)/sum(polarity<=-3)) %>%
+                    mutate(rankThr1 = rank(desc(threshold1)),
+                           rankThr2 = rank(desc(threshold2)),
+                           rankThr3 = rank(desc(threshold3)))
+
+airlinePolarity$avgRank <- 0
+for(i in 1:nrow(airlinePolarity)){
+  airlinePolarity$avgRank[i] <- round(mean(c(as.numeric(airlinePolarity[i,"rankThr1"]),
+         as.numeric(airlinePolarity[i,"rankThr2"]),
+         as.numeric(airlinePolarity[i,"rankThr3"]))))
+}
+
 
 # compare against ACSI
-acsiRank <- c(1,7,2,4,3,9,5,8,10)
-sentimentsByAirline <- mutate(sentimentsByAirline, acsi_rank = acsiRank, rank_diff = abs(row_number()-acsi_rank))
-mean(sentimentsByAirline$rank_diff) # 1.5 rank diff
-mean(sentimentsByAirline$rank_diff[-2]) # 1.1 rank diff if Allegiant is excluded
+acsiRank <- c(1,6,5,4,8,3,2,9,7)
+airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(avgRank-acsi_rank))
+mean(airlinePolarity$rank_diff) # 1.3 rank diff
+mean(airlinePolarity$rank_diff[-2]) # 1 rank diff if Allegiant is excluded
 
 # write to csv
-write_csv(sentimentsByAirline, file.path("~", "Github","ieseDataSciTwitterProject", "sentimentsByAirline.csv", fsep = "/"))
+write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityBing.csv", fsep = "/"))
 
 
 
