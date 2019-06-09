@@ -8,9 +8,12 @@ library(tidytext)
 library(stringr)
 library(ggplot2)
 
-# Reading tweets from csv
+# Reading tweets from csv. Also elimintaing retweets by choosing distinct text entries. 
+# Removing all retweets would have also removed tweets whose original tweet has not 
+# been captured
+
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
-tweetsText <- read_csv(path, col_names = TRUE)
+tweetsText <- read_csv(path, col_names = TRUE) %>% distinct(.,text,.keep_all = TRUE) # To be used in order to exclude retweets
 
 # Perform unnest tokens, adding the tweet ID on a separate column to keep track for further grouping 
 tweetsWords <- tweetsText %>%
@@ -35,7 +38,8 @@ pol[is.na(pol)] <- 0
 pol <- mutate(pol, polarity = n.positive - n.negative)
 
 ggplot(pol, aes(x=polarity)) + geom_histogram(binwidth = 1, color="black",fill="white") + 
-  facet_wrap(facets = "airline", scales = "free")
+  facet_wrap(facets = "airline", scales = "free") + 
+  ggsave(file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityBing.pdf", fsep = "/"))
 
 # As we can see the airlines with the most positive comments, normalised to volume, are 
 # Positive: AlaskaAir, Delta, JetBlue, SouthWest, Allegiant
@@ -59,12 +63,10 @@ for(i in 1:nrow(airlinePolarity)){
          as.numeric(airlinePolarity[i,"rankThr3"]))))
 }
 
-
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
 airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(avgRank-acsi_rank))
-mean(airlinePolarity$rank_diff) # 1.3 rank diff
-mean(airlinePolarity$rank_diff[-2]) # 1 rank diff if Allegiant is excluded
+mean(airlinePolarity$rank_diff) # 0.9 mean rank diff
 
 # write to csv
 write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityBing.csv", fsep = "/"))
