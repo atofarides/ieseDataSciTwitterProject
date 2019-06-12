@@ -13,7 +13,7 @@ library(ggplot2)
 # been captured
 
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
-tweetsText <- read_csv(path, col_names = TRUE) %>% distinct(.,text,.keep_all = TRUE) # To be used in order to exclude retweets
+tweetsText <- read_csv(path, col_names = TRUE) #%>% distinct(.,text,.keep_all = TRUE) # To be used in order to exclude retweets
 
 # Perform unnest tokens, adding the tweet ID on a separate column to keep track for further grouping 
 tweetsWords <- tweetsText %>%
@@ -66,7 +66,7 @@ for(i in 1:nrow(airlinePolarity)){
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
 airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(avgRank-acsi_rank))
-mean(airlinePolarity$rank_diff) # 0.9 mean rank diff
+mean(airlinePolarity$rank_diff) # 1.4 mean rank diff
 
 # write to csv
 write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityBing.csv", fsep = "/"))
