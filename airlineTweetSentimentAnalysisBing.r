@@ -13,7 +13,10 @@ library(ggplot2)
 # been captured
 
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
-tweetsText <- read_csv(path, col_names = TRUE) #%>% distinct(.,text,.keep_all = TRUE) # To be used in order to exclude retweets
+tweetsText <- read_csv(path, col_names = TRUE) 
+
+# Comment out the following line if you want to include retweets in analysis
+tweetsText <- distinct(tweetsText,text,.keep_all = TRUE) # To be used in order to exclude retweets
 
 # Perform unnest tokens, adding the tweet ID on a separate column to keep track for further grouping 
 tweetsWords <- tweetsText %>%
