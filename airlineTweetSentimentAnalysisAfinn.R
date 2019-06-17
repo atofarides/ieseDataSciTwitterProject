@@ -1,4 +1,5 @@
-# Performing analysis on airline tweets dataset using the Afinn lexicon
+# Attemtping the replicate the ACSI index using sentiment analysis on Twitter data
+# Using the Afinn lexicon
 
 # Loading necessary libraries
 library(readr)
@@ -16,16 +17,38 @@ path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.c
 tweetsText <- read_csv(path, col_names = TRUE) 
 
 # Comment out the following line if you want to include retweets in analysis
-#tweetsText <- distinct(tweetsText,text,.keep_all = TRUE) # To be used in order to exclude retweets
+tweetsText <- distinct(tweetsText,text,.keep_all = TRUE) # To be used in order to exclude retweets
+
+# Removing tweets from airline accounts as they do not reflect consumer sentiment 
+tweetsText$screen_name <- tolower(tweetsText$screen_name)
+tweetsText <- tweetsText[!(tweetsText$screen_name %in% c("united", "alaskaair", "allegiant", "americanair", 
+                                                         "delta", "flyfrontier", "hawaiianair", "jetblue", "southwestair", "spiritairlines")),]
 
 # Perform unnest tokens, adding the tweet ID on a separate column to keep track for further grouping 
-tweetsWords <- tweetsText %>%
-              mutate(.,tweetNumber = row_number()) %>%
-              unnest_tokens(., word, text)
+# Sentiment analysis using afinn lexicon
 
-# Sentiment analysis using bing lexicon
-tweetsSentimentsAfinn <- tweetsWords %>%
-                    inner_join(get_sentiments("afinn"))
+tweetsSentimentsAfinn <- tweetsText %>%
+  mutate(.,tweetNumber = row_number()) %>%
+  unnest_tokens(., word, text) %>%
+  group_by(airline) %>%
+  inner_join(get_sentiments("afinn")) %>%
+  mutate(.,total_words = n()) 
+
+# Creating a chart to identify if any of the highest contributing words are out of contect
+tweetsSentimentsAfinn %>%
+  count(airline,word,score,total_words) %>%
+  mutate(.,percent = n/total_words) %>%
+  #filter(sentiment == "positive") %>%
+  top_n(n=20,wt=percent) %>%
+  arrange(airline,desc(n)) %>%
+  ggplot(aes(x=word,y=percent)) + 
+  geom_col() + 
+  coord_flip() +
+  facet_wrap(~airline, scales = "free") 
+
+# Removing words falsely identified as sentiment word such as the word "no" and "united"
+
+tweetsSentimentsAfinn <- tweetsSentimentsAfinn[!(tweetsSentimentsAfinn$word %in% c("no","united")),]
 
 # Create polarity matrix
 
@@ -64,8 +87,8 @@ for(i in 1:nrow(airlinePolarity)){
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
 airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(avgRank-acsi_rank))
-mean(airlinePolarity$rank_diff) # 1.2 mean rank diff
-sd(airlinePolarity$rank_diff) # 1.8 standard deviation
+mean(airlinePolarity$rank_diff) # 0.44 mean rank diff
+sd(airlinePolarity$rank_diff) # 0.73 standard deviation
 
 # write to csv
 write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityAfinn.csv", fsep = "/"))
