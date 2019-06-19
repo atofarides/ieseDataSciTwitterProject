@@ -14,7 +14,9 @@ library(ggplot2)
 # been captured
 
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
-tweetsText <- read_csv(path, col_names = TRUE)
+tweetsText <- read_csv(path, col_names = TRUE) %>%
+  group_by(airline) %>%
+  arrange(created_at)
 
 # Comment out the following line if you want to include retweets in analysis
 tweetsText <- distinct(tweetsText,text,.keep_all = TRUE) # To be used in order to exclude retweets
@@ -72,23 +74,29 @@ ggplot(pol, aes(x=polarity)) + geom_histogram(binwidth = 1, color="black",fill="
 
 airlinePolarity <- pol %>%
                     group_by(airline) %>%
-                    summarise(threshold1 = sum(polarity>=1)/sum(polarity<=-1),
-                              threshold2 = sum(polarity>=2)/sum(polarity<=-2),
-                              threshold3 = sum(polarity>=3)/sum(polarity<=-3)) %>%
-                    mutate(rankThr1 = rank(desc(threshold1)),
-                           rankThr2 = rank(desc(threshold2)),
-                           rankThr3 = rank(desc(threshold3)))
+                    summarise(avgPol = mean(polarity)) %>%
+                    mutate(rankPol = rank(desc(avgPol)))
 
-airlinePolarity$avgRank <- 0
-for(i in 1:nrow(airlinePolarity)){
-  airlinePolarity$avgRank[i] <- round(mean(c(as.numeric(airlinePolarity[i,"rankThr1"]),
-         as.numeric(airlinePolarity[i,"rankThr2"]),
-         as.numeric(airlinePolarity[i,"rankThr3"]))))
-}
+# A more extensive method of figuring out polarities but really not needed
+#airlinePolarity <- pol %>%
+#                    group_by(airline) %>%
+#                    summarise(threshold1 = sum(polarity>=1)/sum(polarity<=-1),
+#                              threshold2 = sum(polarity>=2)/sum(polarity<=-2),
+#                              threshold3 = sum(polarity>=3)/sum(polarity<=-3)) %>%
+#                    mutate(rankThr1 = rank(desc(threshold1)),
+#                           rankThr2 = rank(desc(threshold2)),
+#                           rankThr3 = rank(desc(threshold3)))
+
+#airlinePolarity$avgRank <- 0
+#for(i in 1:nrow(airlinePolarity)){
+#  airlinePolarity$avgRank[i] <- round(mean(c(as.numeric(airlinePolarity[i,"rankThr1"]),
+#         as.numeric(airlinePolarity[i,"rankThr2"]),
+#         as.numeric(airlinePolarity[i,"rankThr3"]))))
+#}
 
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
-airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(avgRank-acsi_rank))
+airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank))
 mean(airlinePolarity$rank_diff) # 0.88 mean rank diff
 sd(airlinePolarity$rank_diff) # 0.92 standard deviation
 
