@@ -93,8 +93,15 @@ airlinePolarity <- pol %>%
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
 airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank))
-mean(airlinePolarity$rank_diff) # 0.44 mean rank diff
-sd(airlinePolarity$rank_diff) # 0.73 standard deviation
+
+ggplot(airlinePolarity,aes(x=airline, group=1)) + 
+  geom_line(aes(y=desc(rankPol),color="blue")) +
+  geom_line(aes(y=desc(acsi_rank),color="red")) +
+  scale_color_discrete(name = "Rank", labels = c("OurRank", "ACSI")) +
+  ggsave(file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityRankAfinn.pdf", fsep = "/"))
+
+mean(airlinePolarity$rank_diff) # 0.66 mean rank diff
+sd(airlinePolarity$rank_diff) # 0.70 standard deviation
 
 # write to csv
 write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityAfinn.csv", fsep = "/"))

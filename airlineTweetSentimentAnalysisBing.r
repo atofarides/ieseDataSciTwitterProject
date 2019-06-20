@@ -14,9 +14,7 @@ library(ggplot2)
 # been captured
 
 path <- file.path("C:", "Users", "anton", "Dropbox", "Twitter Data", "airlines.csv", fsep = "/")
-tweetsText <- read_csv(path, col_names = TRUE) %>%
-  group_by(airline) %>%
-  arrange(created_at)
+tweetsText <- read_csv(path, col_names = TRUE)
 
 # Comment out the following line if you want to include retweets in analysis
 tweetsText <- distinct(tweetsText,text,.keep_all = TRUE) # To be used in order to exclude retweets
@@ -36,18 +34,22 @@ tweetsSentimentsBing <- tweetsText %>%
   inner_join(get_sentiments("bing")) %>%
   mutate(.,total_words = n()) 
                        
-  
 # Creating a chart to identify if any of the highest contributing words are out of context
 tweetsSentimentsBing %>%
   count(airline,word,sentiment,total_words) %>%
   mutate(.,percent = n/total_words) %>%
-  #filter(sentiment == "positive") %>%
+  filter(sentiment == "positive") %>%
   top_n(n=20,wt=percent) %>%
   arrange(airline,desc(n)) %>%
   ggplot(aes(x=word,y=percent)) + 
   geom_col() + 
   coord_flip() +
   facet_wrap(~airline, scales = "free") 
+
+# Removing words falsely identified as sentiment word such as the word "trump"
+
+tweetsSentimentsBing <- tweetsSentimentsBing[!(tweetsSentimentsBing$word %in% c("trump")),]
+
 
 # Create polarity matrix
 positiveSentiments <- tweetsSentimentsBing %>%
@@ -68,16 +70,17 @@ ggplot(pol, aes(x=polarity)) + geom_histogram(binwidth = 1, color="black",fill="
 
 # As we can see the airlines with the most positive comments, normalised to volume, are 
 # Positive: AlaskaAir, Delta, JetBlue, SouthWest, Allegiant
-# Negative: Spirit
+# Negative: Spirit, Fly Frontier
 
-# Create polarity thresholds to rank airlines 
+# Average polarities to rank airlines 
 
 airlinePolarity <- pol %>%
                     group_by(airline) %>%
                     summarise(avgPol = mean(polarity)) %>%
-                    mutate(rankPol = rank(desc(avgPol)))
+                    mutate(rankPol = rank(desc(avgPol))) %>%
+                    ungroup()
 
-# A more extensive method of figuring out polarities but really not needed
+# A more extensive method of ranking polarities using thresholds but really not needed
 #airlinePolarity <- pol %>%
 #                    group_by(airline) %>%
 #                    summarise(threshold1 = sum(polarity>=1)/sum(polarity<=-1),
@@ -97,6 +100,13 @@ airlinePolarity <- pol %>%
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
 airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank))
+
+ggplot(airlinePolarity,aes(x=airline, group=1)) + 
+  geom_line(aes(y=desc(rankPol),color="blue")) +
+  geom_line(aes(y=desc(acsi_rank),color="red")) +
+  scale_color_discrete(name = "Rank", labels = c("OurRank", "ACSI")) +
+  ggsave(file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityRankBing.pdf", fsep = "/"))
+
 mean(airlinePolarity$rank_diff) # 0.88 mean rank diff
 sd(airlinePolarity$rank_diff) # 0.92 standard deviation
 
