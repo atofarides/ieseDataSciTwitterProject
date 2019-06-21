@@ -30,18 +30,21 @@ tweetsText <- tweetsText[!(tweetsText$screen_name %in% c("united", "alaskaair", 
 tweetsSentimentsBing <- tweetsText %>%
   mutate(.,tweetNumber = row_number()) %>%
   unnest_tokens(., word, text) %>%
+  filter(!word %in% stop_words$word)%>%
   group_by(airline) %>%
   inner_join(get_sentiments("bing")) %>%
-  mutate(.,total_words = n()) 
+  mutate(.,total_words = n()) %>%
+  ungroup()
                        
 # Creating a chart to identify if any of the highest contributing words are out of context
 tweetsSentimentsBing %>%
   count(airline,word,sentiment,total_words) %>%
   mutate(.,percent = n/total_words) %>%
-  filter(sentiment == "positive") %>%
-  top_n(n=20,wt=percent) %>%
-  arrange(airline,desc(n)) %>%
-  ggplot(aes(x=word,y=percent)) + 
+  group_by(airline, sentiment == "positive") %>%
+  top_n(n=10,wt=percent) %>%
+  ungroup() %>%
+  mutate(word = reorder(word,percent)) %>%
+  ggplot(aes(x=word,y=percent,fill = sentiment)) + 
   geom_col() + 
   coord_flip() +
   facet_wrap(~airline, scales = "free") 
@@ -99,7 +102,8 @@ airlinePolarity <- pol %>%
 
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
-airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank))
+airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank)) %>%
+  mutate(airline = reorder(airline,acsi_rank))
 
 ggplot(airlinePolarity,aes(x=airline, group=1)) + 
   geom_line(aes(y=desc(rankPol),color="blue")) +
@@ -108,7 +112,7 @@ ggplot(airlinePolarity,aes(x=airline, group=1)) +
   ggsave(file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityRankBing.pdf", fsep = "/"))
 
 mean(airlinePolarity$rank_diff) # 0.88 mean rank diff
-sd(airlinePolarity$rank_diff) # 0.92 standard deviation
+sd(airlinePolarity$rank_diff) # 1.16 standard deviation
 
 # write to csv
 write_csv(airlinePolarity, file.path("~", "Github","ieseDataSciTwitterProject", "airlinePolarityBing.csv", fsep = "/"))

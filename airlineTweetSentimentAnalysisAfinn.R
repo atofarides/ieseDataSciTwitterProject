@@ -30,6 +30,7 @@ tweetsText <- tweetsText[!(tweetsText$screen_name %in% c("united", "alaskaair", 
 tweetsSentimentsAfinn <- tweetsText %>%
   mutate(.,tweetNumber = row_number()) %>%
   unnest_tokens(., word, text) %>%
+  filter(!word %in% stop_words$word)%>%
   group_by(airline) %>%
   inner_join(get_sentiments("afinn")) %>%
   mutate(.,total_words = n()) 
@@ -38,17 +39,18 @@ tweetsSentimentsAfinn <- tweetsText %>%
 tweetsSentimentsAfinn %>%
   count(airline,word,score,total_words) %>%
   mutate(.,percent = n/total_words) %>%
-  #filter(sentiment == "positive") %>%
-  top_n(n=20,wt=percent) %>%
-  arrange(airline,desc(n)) %>%
+  group_by(airline, sentiment == "positive") %>%
+  top_n(n=10,wt=percent) %>%
+  ungroup() %>%
+  mutate(word = reorder(word,percent)) %>%
   ggplot(aes(x=word,y=percent)) + 
   geom_col() + 
   coord_flip() +
   facet_wrap(~airline, scales = "free") 
 
-# Removing words falsely identified as sentiment word such as the word "no" and "united"
+# Removing words falsely identified as sentiment word such as the word "united"
 
-tweetsSentimentsAfinn <- tweetsSentimentsAfinn[!(tweetsSentimentsAfinn$word %in% c("no","united")),]
+tweetsSentimentsAfinn <- tweetsSentimentsAfinn[!(tweetsSentimentsAfinn$word %in% c("united")),]
 
 # Create polarity matrix
 
@@ -92,7 +94,8 @@ airlinePolarity <- pol %>%
 
 # compare against ACSI
 acsiRank <- c(1,6,5,4,8,3,2,9,7)
-airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank))
+airlinePolarity <- mutate(airlinePolarity, acsi_rank = acsiRank, rank_diff = abs(rankPol-acsi_rank)) %>%
+  mutate(airline = reorder(airline,acsi_rank))
 
 ggplot(airlinePolarity,aes(x=airline, group=1)) + 
   geom_line(aes(y=desc(rankPol),color="blue")) +
